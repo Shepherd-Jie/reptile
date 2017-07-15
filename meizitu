@@ -1,0 +1,80 @@
+import requests
+from bs4 import BeautifulSoup
+import os
+import random
+
+
+
+user_agent_list = [
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
+            "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+            "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+            "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
+            "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+            "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+            "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
+        ]
+UA = random.choice(user_agent_list)
+#浏览器请求头，没有这个大部分网站会报错，务必加上。是一个字典文件
+headers = {'User-Agent':UA,'Referer':'https://www.nvshens.com/'}
+#开始的URL地址
+#all_url = 'https://www.nvshens.com/girl/21501/album/'
+all_url = 'https://www.nvshens.com/girl/17596/album/'
+
+#使用requests的get方法来获取all_url，即该网址的内容。
+start_html = requests.get(all_url,headers = headers)#得到的一个response
+#打印出start_html，concent是二进制的数据，一般用于下载图片、视频、音频、等多媒体内容是才使用concent, 对于打印网页内容请使用text
+#print(start_html.text)
+Soup = BeautifulSoup(start_html.text,'lxml')#lxml是指定的解析器
+all_a = Soup.find('ul',class_='photo_ul').find_all('a')
+for a in all_a[::2]:
+    title = a.img['title']  # 取出a标签的文本
+    path = title.strip()  ##去掉空格
+    os.makedirs(os.path.join("D:\mzitu", path))  ##创建一个存放套图的文件夹
+    os.chdir("D:\mzitu\\" + path)  ##切换到上面创建的文件夹
+    href = 'https://www.nvshens.com' + a['href']#生成每一个相册的网址
+    print(href)
+    html = requests.get(href, headers=headers)  #对单个相册分析
+    html_Soup = BeautifulSoup(html.text, 'lxml')  #对单个相册分析
+    max_a = html_Soup.find('div', id='pages').find_all('a')[ -2].get_text()  ##查找所有的<span>标签获取第十个的<span>标签中的文本也就是最后一个页面了。
+    max_page = href + str(int(max_a))+ '.html'
+    max_html= requests.get(max_page, headers=headers)  ##上面说过了
+    max_html_Soup = BeautifulSoup(max_html.text, 'lxml')
+    max_number = max_html_Soup.find('div', class_='gallery_wrapper').find_all('img')[-1]['alt']
+    link = max_html_Soup.find('div', class_='gallery_wrapper').find_all('img')[-1]['src']
+    print(link[:-6])
+    aaa = max_number[-2:]
+    print(aaa)
+    a=1
+    while a <= int(aaa):
+        s = '%02d'% a
+        downlink = link[:-6] + s + '.jpg'
+        print(downlink)
+        a=a+1
+        name = downlink[-6:-4]  ##取URL 倒数第四至第九位 做图片的名字
+        img = requests.get(downlink, headers=headers)
+        f = open(name + '.jpg', 'ab')  ##写入多媒体文件必须要 b 这个参数！！必须要！！
+        f.write(img.content)  ##多媒体文件要是用conctent哦！
+        f.close()
+
+
+
+"""
+    for page in range(1, int(max_a) + 1):  ##不知道为什么这么用的小哥儿去看看基础教程吧
+        page_url = href + '/' + str(page)  ##同上
+        img_html = requests.get(page_url, headers=headers)
+        img_Soup = BeautifulSoup(img_html.text, 'lxml')
+        img_url = img_Soup.find('ul', id='hgallery').find_all('img')[-1].get_text()  ##这三行上面都说过啦不解释了哦
+        print(img_url)
+"""
